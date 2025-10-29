@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Guess the Country</title>
+    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        #map {
+            width: 100%;
+            height: 400px;
+            background: #1a1a2e;
+        }
+
+        .controls {
+            padding: 30px;
+        }
+
+        .rotation-control {
+            margin-bottom: 30px;
+        }
+
+        .rotation-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .slider-container {
+            position: relative;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: linear-gradient(to right, #667eea 0%, #764ba2 100%);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            border: 3px solid #667eea;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            border: 3px solid #667eea;
+        }
+
+        .guess-section {
+            margin-top: 20px;
+        }
+
+        .guess-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .option-btn {
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            background: white;
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .option-btn:hover {
+            border-color: #667eea;
+            background: #f5f7ff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .option-btn.correct {
+            background: #4caf50;
+            border-color: #4caf50;
+            color: white;
+        }
+
+        .option-btn.incorrect {
+            background: #f44336;
+            border-color: #f44336;
+            color: white;
+        }
+
+        .option-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .result-message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .result-message.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .result-message.error {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .result-message:empty {
+            display: none;
+        }
+
+        .next-btn {
+            margin-top: 15px;
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .next-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Mobile responsive styles */
+        @media (max-width: 768px) {
+            body {
+                padding: 0;
+                justify-content: flex-start;
+            }
+
+            .container {
+                max-width: 100%;
+                height: 100vh;
+                border-radius: 0;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .header {
+                padding: 15px 10px;
+            }
+
+            h1 {
+                font-size: 22px;
+                margin-bottom: 0;
+            }
+
+            .subtitle {
+                display: none;
+            }
+
+            #map {
+                height: 45vh;
+                flex-shrink: 0;
+            }
+
+            .controls {
+                padding: 15px;
+                flex: 1;
+                overflow-y: auto;
+            }
+
+            .rotation-control {
+                margin-bottom: 20px;
+            }
+
+            .rotation-label {
+                font-size: 13px;
+                margin-bottom: 8px;
+            }
+
+            .guess-section {
+                margin-top: 15px;
+            }
+
+            .guess-title {
+                font-size: 16px;
+                margin-bottom: 12px;
+            }
+
+            .options-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .option-btn {
+                padding: 14px 12px;
+                font-size: 15px;
+            }
+
+            .result-message {
+                margin-top: 15px;
+                padding: 12px;
+                font-size: 16px;
+            }
+
+            .next-btn {
+                margin-top: 12px;
+                padding: 14px;
+                font-size: 15px;
+            }
+
+            input[type="range"]::-webkit-slider-thumb {
+                width: 20px;
+                height: 20px;
+            }
+
+            input[type="range"]::-moz-range-thumb {
+                width: 20px;
+                height: 20px;
+            }
+        }
+
+        /* Extra small mobile devices */
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 20px;
+            }
+
+            #map {
+                height: 40vh;
+            }
+
+            .controls {
+                padding: 12px;
+            }
+
+            .option-btn {
+                padding: 12px 10px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌍 Guess the Country</h1>
+            <p class="subtitle">Rotate and identify the country!</p>
+        </div>
+
+        <div id="map"></div>
+
+        <div class="controls">
+            <div class="rotation-control">
+                <div class="rotation-label">
+                    <span>Rotate Map</span>
+                    <span id="bearing-value">0°</span>
+                </div>
+                <input type="range" id="rotation-slider" min="0" max="360" value="0" step="1">
+            </div>
+
+            <div class="guess-section">
+                <div class="guess-title">Which country is this?</div>
+                <div class="options-grid" id="options-container"></div>
+                <div id="result-message"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let map;
+        let countriesData;
+        let currentCountry;
+        let options = [];
+        let gameEnded = false;
+
+        // Initialize the map
+        function initMap() {
+            map = new maplibregl.Map({
+                container: 'map',
+                style: {
+                    version: 8,
+                    sources: {},
+                    layers: []
+                },
+                center: [0, 0],
+                zoom: 1,
+                bearing: 0,
+                pitch: 0
+            });
+
+            map.on('load', () => {
+                loadCountriesData();
+            });
+        }
+
+        // Load GeoJSON data
+        async function loadCountriesData() {
+            try {
+                const response = await fetch('countries.geojson');
+                countriesData = await response.json();
+                startNewGame();
+            } catch (error) {
+                console.error('Error loading GeoJSON:', error);
+                alert('Please make sure your countries.geojson file is in the same directory!');
+            }
+        }
+
+        // Start a new game
+        function startNewGame() {
+            gameEnded = false;
+            document.getElementById('result-message').innerHTML = '';
+
+            // Select random country
+            const randomIndex = Math.floor(Math.random() * countriesData.features.length);
+            currentCountry = countriesData.features[randomIndex];
+
+            // Generate random rotation
+            const randomBearing = Math.floor(Math.random() * 360);
+
+            // Update map - show only country without world map
+            displayCountry(currentCountry, randomBearing, false);
+
+            // Generate options
+            generateOptions();
+        }
+
+        // Display country on map
+        function displayCountry(country, bearing, showWorldMap) {
+            // Remove existing layers
+            if (map.getLayer('country-fill')) map.removeLayer('country-fill');
+            if (map.getLayer('country-border')) map.removeLayer('country-border');
+            if (map.getLayer('country-highlight')) map.removeLayer('country-highlight');
+            if (map.getLayer('raster-layer')) map.removeLayer('raster-layer');
+
+            // Remove existing sources
+            if (map.getSource('country')) map.removeSource('country');
+            if (map.getSource('osm-tiles')) map.removeSource('osm-tiles');
+
+            if (showWorldMap) {
+                // Add OpenStreetMap raster tiles as base layer
+                map.addSource('osm-tiles', {
+                    type: 'raster',
+                    tiles: [
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+                    ],
+                    tileSize: 256,
+                    attribution: '© OpenStreetMap contributors'
+                });
+
+                map.addLayer({
+                    id: 'raster-layer',
+                    type: 'raster',
+                    source: 'osm-tiles',
+                    minzoom: 0,
+                    maxzoom: 22
+                });
+            }
+
+            // Add country source
+            map.addSource('country', {
+                type: 'geojson',
+                data: {
+                    type: 'FeatureCollection',
+                    features: [country]
+                }
+            });
+
+            if (!showWorldMap) {
+                // Show only country shape (dark fill)
+                map.addLayer({
+                    id: 'country-fill',
+                    type: 'fill',
+                    source: 'country',
+                    paint: {
+                        'fill-color': '#333',
+                        'fill-opacity': 0.8
+                    }
+                });
+            } else {
+                // Highlight country on world map
+                map.addLayer({
+                    id: 'country-highlight',
+                    type: 'fill',
+                    source: 'country',
+                    paint: {
+                        'fill-color': '#ff6b6b',
+                        'fill-opacity': 0.6
+                    }
+                });
+            }
+
+            // Add border layer with white borders
+            map.addLayer({
+                id: 'country-border',
+                type: 'line',
+                source: 'country',
+                paint: {
+                    'line-color': '#ffffff',
+                    'line-width': showWorldMap ? 3 : 3
+                }
+            });
+
+            // Fit map to appropriate bounds
+            const bounds = new maplibregl.LngLatBounds();
+            const coordinates = country.geometry.coordinates;
+
+            function addCoordinates(coords) {
+                if (Array.isArray(coords[0])) {
+                    coords.forEach(coord => addCoordinates(coord));
+                } else {
+                    bounds.extend(coords);
+                }
+            }
+
+            addCoordinates(coordinates);
+
+            if (showWorldMap) {
+                // Show world map with country highlighted - zoom out a bit
+                map.fitBounds(bounds, {
+                    padding: 100,
+                    bearing: 0,
+                    duration: 1500,
+                    maxZoom: 6
+                });
+            } else {
+                // Show only country
+                map.fitBounds(bounds, {
+                    padding: 50,
+                    bearing: bearing,
+                    duration: 1000
+                });
+            }
+
+            // Update slider
+            if (!showWorldMap) {
+                document.getElementById('rotation-slider').value = bearing;
+                document.getElementById('bearing-value').textContent = bearing + '°';
+            }
+        }
+
+        // Generate answer options
+        function generateOptions() {
+            options = [currentCountry];
+
+            // Add 3 random wrong answers
+            while (options.length < 4) {
+                const randomCountry = countriesData.features[Math.floor(Math.random() * countriesData.features.length)];
+                if (!options.includes(randomCountry)) {
+                    options.push(randomCountry);
+                }
+            }
+
+            // Shuffle options
+            options.sort(() => Math.random() - 0.5);
+
+            // Display options
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+
+            options.forEach(country => {
+                const button = document.createElement('button');
+                button.className = 'option-btn';
+                button.textContent = country.properties.name;
+                button.onclick = () => checkAnswer(country, button);
+                container.appendChild(button);
+            });
+        }
+
+        // Check answer
+        function checkAnswer(selectedCountry, button) {
+            if (gameEnded) return;
+
+            gameEnded = true;
+            const isCorrect = selectedCountry === currentCountry;
+
+            // Show world map with highlighted country
+            displayCountry(currentCountry, 0, true);
+
+            // Disable slider when showing world map
+            document.getElementById('rotation-slider').disabled = true;
+
+            // Disable all buttons and highlight correct/incorrect
+            const buttons = document.querySelectorAll('.option-btn');
+            buttons.forEach(btn => {
+                btn.disabled = true;
+                if (btn.textContent === currentCountry.properties.name) {
+                    btn.classList.add('correct');
+                } else if (btn === button && !isCorrect) {
+                    btn.classList.add('incorrect');
+                }
+            });
+
+            // Show result message
+            const resultDiv = document.getElementById('result-message');
+            if (isCorrect) {
+                resultDiv.className = 'result-message success';
+                resultDiv.innerHTML = `🎉 Correct! It's ${currentCountry.properties.name}!`;
+            } else {
+                resultDiv.className = 'result-message error';
+                resultDiv.innerHTML = `❌ Wrong! It was ${currentCountry.properties.name}`;
+            }
+
+            // Add next button
+            const nextBtn = document.createElement('button');
+            nextBtn.className = 'next-btn';
+            nextBtn.textContent = 'Next Country →';
+            nextBtn.onclick = () => {
+                document.getElementById('rotation-slider').disabled = false;
+                startNewGame();
+            };
+            resultDiv.appendChild(nextBtn);
+        }
+
+        // Handle rotation slider
+        document.getElementById('rotation-slider').addEventListener('input', (e) => {
+            const bearing = parseInt(e.target.value);
+            map.setBearing(bearing);
+            document.getElementById('bearing-value').textContent = bearing + '°';
+        });
+
+        // Initialize
+        initMap();
+    </script>
+</body>
+
+</html>
