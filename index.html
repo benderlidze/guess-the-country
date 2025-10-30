@@ -693,12 +693,12 @@
         // Load GeoJSON data
         async function loadCountriesData() {
             try {
-                const response = await fetch('countries.geojson');
+                const response = await fetch('world.json');
                 countriesData = await response.json();
                 startNewGame();
             } catch (error) {
                 console.error('Error loading GeoJSON:', error);
-                alert('Please make sure your countries.geojson file is in the same directory!');
+                alert('Please make sure your world.json file is in the same directory!');
             }
         }
 
@@ -857,7 +857,7 @@
             options.forEach(country => {
                 const button = document.createElement('button');
                 button.className = 'option-btn';
-                button.textContent = country.properties.name;
+                button.textContent = country.properties.COUNTRY;
                 button.onclick = () => checkAnswer(country, button);
                 container.appendChild(button);
             });
@@ -880,7 +880,7 @@
             const buttons = document.querySelectorAll('.option-btn');
             buttons.forEach(btn => {
                 btn.disabled = true;
-                if (btn.textContent === currentCountry.properties.name) {
+                if (btn.textContent === currentCountry.properties.COUNTRY) {
                     btn.classList.add('correct');
                 } else if (btn === button && !isCorrect) {
                     btn.classList.add('incorrect');
@@ -891,10 +891,10 @@
             const resultDiv = document.getElementById('result-message');
             if (isCorrect) {
                 resultDiv.className = 'result-message success';
-                resultDiv.innerHTML = `🎉 Correct! It's ${currentCountry.properties.name}!`;
+                resultDiv.innerHTML = `🎉 Correct! It's ${currentCountry.properties.COUNTRY}!`;
             } else {
                 resultDiv.className = 'result-message error';
-                resultDiv.innerHTML = `❌ Wrong! It was ${currentCountry.properties.name}`;
+                resultDiv.innerHTML = `❌ Wrong! It was ${currentCountry.properties.COUNTRY}`;
             }
 
             // Add next button
